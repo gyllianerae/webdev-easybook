@@ -1,7 +1,17 @@
 import { useState, useEffect } from 'react';
+import { api } from '../utils/api';
 
 function Dashboard() {
   const [user, setUser] = useState(null);
+  const [stats, setStats] = useState({
+    myAppointments: 0,
+    upcoming: 0,
+    availableSlots: 0,
+    totalTimeSlots: 0,
+    totalBookings: 0,
+    activeStudents: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -9,6 +19,57 @@ function Dashboard() {
       setUser(JSON.parse(userData));
     }
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const [appointments, timeSlots] = await Promise.all([
+        api.getAppointments().catch(() => []),
+        api.getTimeSlots().catch(() => []),
+      ]);
+
+      const isStudent = user.role === 'student';
+      
+      if (isStudent) {
+        const myAppointments = appointments.filter(apt => apt.status === 'booked');
+        const upcoming = myAppointments.filter(apt => {
+          const slotDate = new Date(apt.timeSlot.date);
+          return slotDate >= new Date();
+        });
+        const available = timeSlots.filter(slot => 
+          (slot.currentBookings || 0) < slot.maxBookings
+        );
+
+        setStats({
+          myAppointments: myAppointments.length,
+          upcoming: upcoming.length,
+          availableSlots: available.length,
+        });
+      } else {
+        // Staff/Admin stats
+        const allBookings = appointments.filter(apt => apt.status === 'booked');
+        const uniqueStudents = new Set(
+          appointments.map(apt => apt.student?._id || apt.student)
+        );
+
+        setStats({
+          totalTimeSlots: timeSlots.length,
+          totalBookings: allBookings.length,
+          activeStudents: uniqueStudents.size,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch stats:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!user) {
     return <div>Loading...</div>;
@@ -54,7 +115,9 @@ function Dashboard() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">My Appointments</p>
-                  <p className="text-2xl font-semibold text-gray-900">0</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {loading ? '...' : stats.myAppointments}
+                  </p>
                 </div>
               </div>
             </div>
@@ -78,7 +141,9 @@ function Dashboard() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Upcoming</p>
-                  <p className="text-2xl font-semibold text-gray-900">0</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {loading ? '...' : stats.upcoming}
+                  </p>
                 </div>
               </div>
             </div>
@@ -102,7 +167,9 @@ function Dashboard() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Available Slots</p>
-                  <p className="text-2xl font-semibold text-gray-900">0</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {loading ? '...' : stats.availableSlots}
+                  </p>
                 </div>
               </div>
             </div>
@@ -128,7 +195,9 @@ function Dashboard() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Time Slots</p>
-                  <p className="text-2xl font-semibold text-gray-900">0</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {loading ? '...' : stats.totalTimeSlots}
+                  </p>
                 </div>
               </div>
             </div>
@@ -152,7 +221,9 @@ function Dashboard() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Bookings</p>
-                  <p className="text-2xl font-semibold text-gray-900">0</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {loading ? '...' : stats.totalBookings}
+                  </p>
                 </div>
               </div>
             </div>
@@ -176,7 +247,9 @@ function Dashboard() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Active Students</p>
-                  <p className="text-2xl font-semibold text-gray-900">0</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {loading ? '...' : stats.activeStudents}
+                  </p>
                 </div>
               </div>
             </div>
@@ -190,21 +263,33 @@ function Dashboard() {
         <div className="flex flex-wrap gap-4">
           {isStudent ? (
             <>
-              <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+              <a
+                href="#timeslots"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition inline-block"
+              >
                 Browse Available Slots
-              </button>
-              <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+              </a>
+              <a
+                href="#appointments"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition inline-block"
+              >
                 View My Appointments
-              </button>
+              </a>
             </>
           ) : (
             <>
-              <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+              <a
+                href="#timeslots"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition inline-block"
+              >
                 Create New Time Slot
-              </button>
-              <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+              </a>
+              <a
+                href="#appointments"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition inline-block"
+              >
                 View All Bookings
-              </button>
+              </a>
             </>
           )}
         </div>

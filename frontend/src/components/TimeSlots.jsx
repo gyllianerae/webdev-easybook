@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '../utils/api';
 
 function TimeSlots() {
   const [user, setUser] = useState(() => {
@@ -6,6 +7,9 @@ function TimeSlots() {
     return userData ? JSON.parse(userData) : null;
   });
 
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -14,41 +18,27 @@ function TimeSlots() {
     endTime: '',
     maxBookings: 1,
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const isStaff = user && (user.role === 'staff' || user.role === 'admin');
+  const isStudent = user && user.role === 'student';
 
-  const [timeSlots] = useState([
-    {
-      _id: '1',
-      title: 'Office Hours - Math Tutoring',
-      date: '2024-01-15',
-      startTime: '10:00',
-      endTime: '11:00',
-      maxBookings: 3,
-      createdBy: { name: 'Dr. Smith', email: 'smith@example.com' },
-      currentBookings: 1,
-    },
-    {
-      _id: '2',
-      title: 'Office Hours - Science Help',
-      date: '2024-01-16',
-      startTime: '14:00',
-      endTime: '15:30',
-      maxBookings: 2,
-      createdBy: { name: 'Dr. Johnson', email: 'johnson@example.com' },
-      currentBookings: 0,
-    },
-    {
-      _id: '3',
-      title: 'Career Counseling Session',
-      date: '2024-01-17',
-      startTime: '09:00',
-      endTime: '10:00',
-      maxBookings: 1,
-      createdBy: { name: 'Ms. Williams', email: 'williams@example.com' },
-      currentBookings: 1,
-    },
-  ]);
+  useEffect(() => {
+    fetchTimeSlots();
+  }, []);
+
+  const fetchTimeSlots = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const slots = await api.getTimeSlots();
+      setTimeSlots(slots);
+    } catch (err) {
+      setError(err.message || 'Failed to load time slots');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -57,18 +47,59 @@ function TimeSlots() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Static form submission - just close the form
-    alert('Time slot creation will be implemented with API integration');
-    setShowCreateForm(false);
-    setFormData({
-      title: '',
-      date: '',
-      startTime: '',
-      endTime: '',
-      maxBookings: 1,
-    });
+    setSubmitting(true);
+    setError('');
+
+    try {
+      await api.createTimeSlot(
+        formData.title,
+        formData.date,
+        formData.startTime,
+        formData.endTime,
+        parseInt(formData.maxBookings)
+      );
+      setShowCreateForm(false);
+      setFormData({
+        title: '',
+        date: '',
+        startTime: '',
+        endTime: '',
+        maxBookings: 1,
+      });
+      await fetchTimeSlots();
+    } catch (err) {
+      setError(err.message || 'Failed to create time slot');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (slotId) => {
+    if (!window.confirm('Are you sure you want to delete this time slot?')) {
+      return;
+    }
+
+    try {
+      setError('');
+      await api.deleteTimeSlot(slotId);
+      await fetchTimeSlots();
+    } catch (err) {
+      setError(err.message || 'Failed to delete time slot');
+    }
+  };
+
+  const handleBook = async (slotId) => {
+    try {
+      setError('');
+      await api.bookAppointment(slotId);
+      alert('Appointment booked successfully!');
+      await fetchTimeSlots();
+    } catch (err) {
+      setError(err.message || 'Failed to book appointment');
+      alert(err.message || 'Failed to book appointment');
+    }
   };
 
   const formatDate = (dateString) => {
@@ -98,6 +129,18 @@ function TimeSlots() {
           </button>
         )}
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <p className="text-gray-500">Loading time slots...</p>
+        </div>
+      )}
 
       {/* Create Form */}
       {showCreateForm && isStaff && (
@@ -195,9 +238,10 @@ function TimeSlots() {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                disabled={submitting}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Time Slot
+                {submitting ? 'Creating...' : 'Create Time Slot'}
               </button>
             </div>
           </form>
@@ -205,13 +249,14 @@ function TimeSlots() {
       )}
 
       {/* Time Slots List */}
-      <div className="space-y-4">
-        {timeSlots.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-500">No time slots available.</p>
-          </div>
-        ) : (
-          timeSlots.map((slot) => (
+      {!loading && (
+        <div className="space-y-4">
+          {timeSlots.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <p className="text-gray-500">No time slots available.</p>
+            </div>
+          ) : (
+            timeSlots.map((slot) => (
             <div
               key={slot._id}
               className="bg-white rounded-lg shadow p-6 hover:shadow-md transition"
@@ -296,22 +341,29 @@ function TimeSlots() {
                       Full
                     </span>
                   )}
-                  {!isStaff && isAvailable(slot) && (
-                    <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm">
+                  {isStudent && isAvailable(slot) && (
+                    <button
+                      onClick={() => handleBook(slot._id)}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"
+                    >
                       Book Now
                     </button>
                   )}
                   {isStaff && (
-                    <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
+                    <button
+                      onClick={() => handleDelete(slot._id)}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
+                    >
                       Delete
                     </button>
                   )}
                 </div>
               </div>
             </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { api } from '../utils/api';
 
-function Login() {
+function Login({ onLogin }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
+    role: 'student',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,10 +28,10 @@ function Login() {
     try {
       if (isSignUp) {
         // Sign up flow
-        await api.register(formData.name, formData.email, formData.password);
+        await api.register(formData.name, formData.email, formData.password, formData.role);
         alert('Account created successfully! Please sign in.');
         setIsSignUp(false);
-        setFormData({ name: '', email: '', password: '' });
+        setFormData({ name: '', email: '', password: '', role: 'student' });
       } else {
         // Login flow
         const response = await api.login(formData.email, formData.password);
@@ -39,6 +40,11 @@ function Login() {
         localStorage.setItem('user', JSON.stringify(response.user));
         
         alert(`Welcome back, ${response.user.name}! (Role: ${response.user.role})`);
+        
+        // Notify parent component
+        if (onLogin) {
+          onLogin();
+        }
         
         // Reload to show the main app
         window.location.reload();
@@ -52,7 +58,7 @@ function Login() {
 
   const toggleMode = () => {
     setIsSignUp(!isSignUp);
-    setFormData({ name: '', email: '', password: '' });
+    setFormData({ name: '', email: '', password: '', role: 'student' });
     setError('');
   };
 
@@ -78,21 +84,40 @@ function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {isSignUp && (
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-                  placeholder="John Doe"
-                />
-              </div>
+              <>
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+                    Role
+                  </label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                  >
+                    <option value="student">Student</option>
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </>
             )}
 
             <div>

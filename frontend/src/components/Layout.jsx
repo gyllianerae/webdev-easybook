@@ -1,15 +1,6 @@
 import { useState, useEffect } from 'react';
 
-function Layout({ children, currentPage, onNavigate }) {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
-
+function Layout({ children, currentPage, onNavigate, user }) {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');

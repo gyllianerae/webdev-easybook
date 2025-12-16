@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '../utils/api';
 
 function Appointments() {
   const [user, setUser] = useState(() => {
@@ -6,51 +7,30 @@ function Appointments() {
     return userData ? JSON.parse(userData) : null;
   });
 
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState('all'); // all, booked, cancelled
+
   const isStudent = user && user.role === 'student';
   const isStaff = user && (user.role === 'staff' || user.role === 'admin');
 
-  // Static sample data
-  const [appointments] = useState([
-    {
-      _id: '1',
-      student: { name: 'John Doe', email: 'john@example.com' },
-      timeSlot: {
-        title: 'Office Hours - Math Tutoring',
-        date: '2024-01-15',
-        startTime: '10:00',
-        endTime: '11:00',
-        createdBy: { name: 'Dr. Smith' },
-      },
-      status: 'booked',
-      createdAt: '2024-01-10T08:00:00Z',
-    },
-    {
-      _id: '2',
-      student: { name: 'Jane Smith', email: 'jane@example.com' },
-      timeSlot: {
-        title: 'Career Counseling Session',
-        date: '2024-01-17',
-        startTime: '09:00',
-        endTime: '10:00',
-        createdBy: { name: 'Ms. Williams' },
-      },
-      status: 'booked',
-      createdAt: '2024-01-11T10:30:00Z',
-    },
-    {
-      _id: '3',
-      student: { name: 'Bob Johnson', email: 'bob@example.com' },
-      timeSlot: {
-        title: 'Office Hours - Science Help',
-        date: '2024-01-16',
-        startTime: '14:00',
-        endTime: '15:30',
-        createdBy: { name: 'Dr. Johnson' },
-      },
-      status: 'cancelled',
-      createdAt: '2024-01-12T14:20:00Z',
-    },
-  ]);
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await api.getAppointments();
+      setAppointments(data);
+    } catch (err) {
+      setError(err.message || 'Failed to load appointments');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -73,20 +53,45 @@ function Appointments() {
     });
   };
 
-  const handleCancel = (appointmentId) => {
-    // Static cancellation - will be implemented with API
-    alert(`Cancellation for appointment ${appointmentId} will be implemented with API integration`);
+  const handleCancel = async (appointmentId) => {
+    if (!window.confirm('Are you sure you want to cancel this appointment?')) {
+      return;
+    }
+
+    try {
+      setError('');
+      await api.cancelAppointment(appointmentId);
+      alert('Appointment cancelled successfully');
+      await fetchAppointments();
+    } catch (err) {
+      setError(err.message || 'Failed to cancel appointment');
+      alert(err.message || 'Failed to cancel appointment');
+    }
   };
 
-  const handleDelete = (appointmentId) => {
-    // Static deletion - will be implemented with API
-    alert(`Deletion for appointment ${appointmentId} will be implemented with API integration`);
+  const handleDelete = async (appointmentId) => {
+    if (!window.confirm('Are you sure you want to delete this appointment?')) {
+      return;
+    }
+
+    try {
+      setError('');
+      await api.deleteAppointment(appointmentId);
+      await fetchAppointments();
+    } catch (err) {
+      setError(err.message || 'Failed to delete appointment');
+      alert(err.message || 'Failed to delete appointment');
+    }
   };
 
-  // Filter appointments based on user role
-  const filteredAppointments = isStudent
-    ? appointments.filter((apt) => apt.student.email === user?.email)
-    : appointments;
+  // Filter appointments based on user role and status filter
+  const filteredAppointments = appointments.filter((apt) => {
+    // Apply status filter
+    if (filter !== 'all' && apt.status !== filter) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="px-4 py-6 sm:px-0">
@@ -101,24 +106,58 @@ function Appointments() {
         )}
       </div>
 
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Filter Tabs */}
       {isStaff && (
         <div className="mb-6 flex space-x-4 border-b border-gray-200">
-          <button className="px-4 py-2 border-b-2 border-indigo-500 text-indigo-600 font-medium">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 border-b-2 font-medium transition ${
+              filter === 'all'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
             All
           </button>
-          <button className="px-4 py-2 text-gray-500 hover:text-gray-700">
+          <button
+            onClick={() => setFilter('booked')}
+            className={`px-4 py-2 border-b-2 font-medium transition ${
+              filter === 'booked'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
             Booked
           </button>
-          <button className="px-4 py-2 text-gray-500 hover:text-gray-700">
+          <button
+            onClick={() => setFilter('cancelled')}
+            className={`px-4 py-2 border-b-2 font-medium transition ${
+              filter === 'cancelled'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
             Cancelled
           </button>
         </div>
       )}
 
+      {loading && (
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <p className="text-gray-500">Loading appointments...</p>
+        </div>
+      )}
+
       {/* Appointments List */}
-      <div className="space-y-4">
-        {filteredAppointments.length === 0 ? (
+      {!loading && (
+        <div className="space-y-4">
+          {filteredAppointments.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -268,8 +307,9 @@ function Appointments() {
               </div>
             </div>
           ))
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

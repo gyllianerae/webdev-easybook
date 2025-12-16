@@ -43,5 +43,51 @@ export const api = {
       body: JSON.stringify({ name, email, password, role }),
     });
   },
+
+  // Time Slots
+  async getTimeSlots() {
+    return this.request('/timeslots', {
+      method: 'GET',
+    });
+  },
+
+  async createTimeSlot(title, date, startTime, endTime, maxBookings = 1) {
+    return this.request('/timeslots', {
+      method: 'POST',
+      body: JSON.stringify({ title, date, startTime, endTime, maxBookings }),
+    });
+  },
+
+  async deleteTimeSlot(id) {
+    return this.request(`/timeslots/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Appointments
+  async getAppointments() {
+    return this.request('/appointments', {
+      method: 'GET',
+    });
+  },
+
+  async bookAppointment(timeSlotId) {
+    return this.request('/appointments', {
+      method: 'POST',
+      body: JSON.stringify({ timeSlotId }),
+    });
+  },
+
+  async cancelAppointment(appointmentId) {
+    return this.request(`/appointments/${appointmentId}/cancel`, {
+      method: 'PATCH',
+    });
+  },
+
+  async deleteAppointment(appointmentId) {
+    return this.request(`/appointments/${appointmentId}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
