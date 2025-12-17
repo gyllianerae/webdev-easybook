@@ -104,11 +104,18 @@ The frontend will run on `http://localhost:5173` (or another port if 5173 is tak
    - Book appointments
    - View and cancel your appointments
    
-3. **Staff/Admin**:
+3. **Staff**:
+   - Create time slots with date, time, and max bookings
+   - View all appointments
+   - Delete their own time slots and appointments
+   - View dashboard statistics
+
+4.  **Admin**:
    - Create time slots with date, time, and max bookings
    - View all appointments
    - Delete time slots and appointments
    - View dashboard statistics
+   - Manage user accounts
 
 ## API Endpoints
 

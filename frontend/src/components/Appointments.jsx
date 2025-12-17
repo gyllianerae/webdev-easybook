@@ -13,7 +13,9 @@ function Appointments() {
   const [filter, setFilter] = useState('all'); // all, booked, cancelled
 
   const isStudent = user && user.role === 'student';
-  const isStaff = user && (user.role === 'staff' || user.role === 'admin');
+  const isAdmin = user && user.role === 'admin';
+  const isStaff = user && user.role === 'staff';
+  const isStaffOrAdmin = isStaff || isAdmin;
 
   useEffect(() => {
     fetchAppointments();
@@ -90,8 +92,15 @@ function Appointments() {
     if (filter !== 'all' && apt.status !== filter) {
       return false;
     }
-    return true;
+    // Avoid null time slots from crashing the UI
+    return Boolean(apt.timeSlot);
   });
+
+  const canDeleteAppointment = (appointment) => {
+    if (isAdmin) return true;
+    if (!isStaff) return false;
+    return appointment?.timeSlot?.createdBy?._id === user?.id;
+  };
 
   return (
     <div className="px-4 py-6 sm:px-0">
@@ -99,7 +108,7 @@ function Appointments() {
         <h2 className="text-2xl font-bold text-gray-900">
           {isStudent ? 'My Appointments' : 'All Appointments'}
         </h2>
-        {isStaff && (
+        {isStaffOrAdmin && (
           <div className="text-sm text-gray-600">
             Total: {appointments.length} appointments
           </div>
@@ -113,7 +122,7 @@ function Appointments() {
       )}
 
       {/* Filter Tabs */}
-      {isStaff && (
+      {isStaffOrAdmin && (
         <div className="mb-6 flex space-x-4 border-b border-gray-200">
           <button
             onClick={() => setFilter('all')}
@@ -188,7 +197,7 @@ function Appointments() {
                 <div className="flex-1">
                   <div className="flex items-center mb-3">
                     <h3 className="text-lg font-semibold text-gray-900 mr-3">
-                      {appointment.timeSlot.title}
+                      {appointment.timeSlot?.title || 'Unknown slot'}
                     </h3>
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -216,7 +225,7 @@ function Appointments() {
                           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
-                      {formatDate(appointment.timeSlot.date)}
+                      {appointment.timeSlot?.date ? formatDate(appointment.timeSlot.date) : 'Unknown date'}
                     </p>
                     <p className="flex items-center">
                       <svg
@@ -232,9 +241,11 @@ function Appointments() {
                           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      {appointment.timeSlot.startTime} - {appointment.timeSlot.endTime}
+                      {appointment.timeSlot?.startTime && appointment.timeSlot?.endTime
+                        ? `${appointment.timeSlot.startTime} - ${appointment.timeSlot.endTime}`
+                        : 'Time unavailable'}
                     </p>
-                    {isStaff && (
+                    {isStaffOrAdmin && (
                       <p className="flex items-center">
                         <svg
                           className="h-4 w-4 mr-2"
@@ -249,7 +260,7 @@ function Appointments() {
                             d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                           />
                         </svg>
-                        Student: {appointment.student.name} ({appointment.student.email})
+                        Student: {appointment.student?.name} ({appointment.student?.email})
                       </p>
                     )}
                     <p className="flex items-center">
@@ -266,7 +277,7 @@ function Appointments() {
                           d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      Host: {appointment.timeSlot.createdBy.name}
+                      Host: {appointment.timeSlot?.createdBy?.name || 'Unknown'}
                     </p>
                     <p className="flex items-center text-xs text-gray-500">
                       <svg
@@ -295,7 +306,7 @@ function Appointments() {
                       Cancel
                     </button>
                   )}
-                  {isStaff && (
+                  {isStaffOrAdmin && canDeleteAppointment(appointment) && (
                     <button
                       onClick={() => handleDelete(appointment._id)}
                       className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
