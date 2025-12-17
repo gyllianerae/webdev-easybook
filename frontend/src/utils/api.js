@@ -51,10 +51,10 @@ export const api = {
     });
   },
 
-  async createTimeSlot(title, date, startTime, endTime, maxBookings = 1) {
+  async createTimeSlot(title, date, startTime, endTime, maxBookings = 1, staffId) {
     return this.request('/timeslots', {
       method: 'POST',
-      body: JSON.stringify({ title, date, startTime, endTime, maxBookings }),
+      body: JSON.stringify({ title, date, startTime, endTime, maxBookings, staffId }),
     });
   },
 
@@ -87,6 +87,13 @@ export const api = {
   async deleteAppointment(appointmentId) {
     return this.request(`/appointments/${appointmentId}`, {
       method: 'DELETE',
+    });
+  },
+
+  // Users
+  async getStaff() {
+    return this.request('/users/staff', {
+      method: 'GET',
     });
   },
 };

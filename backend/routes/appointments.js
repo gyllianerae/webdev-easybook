@@ -125,11 +125,21 @@ router.patch("/:id/cancel", auth, async (req, res) => {
 // Delete an appointment (admin/staff only)
 router.delete("/:id", auth, requireRole(["staff", "admin"]), async (req, res) => {
   try {
-    const appointment = await Appointment.findByIdAndDelete(req.params.id);
+    const appointment = await Appointment.findById(req.params.id).populate("timeSlot");
     
     if (!appointment) {
       return res.status(404).json({ msg: "Appointment not found" });
     }
+
+    const isAdmin = req.user.role === "admin";
+    const isSlotOwner = appointment.timeSlot && appointment.timeSlot.createdBy.toString() === req.user.id;
+
+    // Staff can only delete appointments for their own time slots; admins can delete any
+    if (!isAdmin && !isSlotOwner) {
+      return res.status(403).json({ msg: "Forbidden" });
+    }
+
+    await appointment.deleteOne();
     
     res.json({ msg: "Appointment deleted" });
   } catch (err) {

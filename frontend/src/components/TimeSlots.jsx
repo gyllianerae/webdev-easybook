@@ -11,21 +11,31 @@ function TimeSlots() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [staffOptions, setStaffOptions] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
     date: '',
     startTime: '',
     endTime: '',
     maxBookings: 1,
+    staffId: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const isStaff = user && (user.role === 'staff' || user.role === 'admin');
+  const isAdmin = user && user.role === 'admin';
+  const isStaff = user && user.role === 'staff';
+  const isStaffOrAdmin = isStaff || isAdmin;
   const isStudent = user && user.role === 'student';
 
   useEffect(() => {
     fetchTimeSlots();
   }, []);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchStaff();
+    }
+  }, [isAdmin]);
 
   const fetchTimeSlots = async () => {
     try {
@@ -37,6 +47,17 @@ function TimeSlots() {
       setError(err.message || 'Failed to load time slots');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStaff = async () => {
+    try {
+      const staff = await api.getStaff();
+      setStaffOptions(staff);
+    } catch (err) {
+      // Keep the UI usable even if this fails; surface message when admin submits without staff
+      console.error(err);
+      setStaffOptions([]);
     }
   };
 
@@ -53,12 +74,19 @@ function TimeSlots() {
     setError('');
 
     try {
+      if (isAdmin && !formData.staffId) {
+        setSubmitting(false);
+        setError('Please select a staff member for this time slot.');
+        return;
+      }
+
       await api.createTimeSlot(
         formData.title,
         formData.date,
         formData.startTime,
         formData.endTime,
-        parseInt(formData.maxBookings)
+        parseInt(formData.maxBookings),
+        isAdmin ? formData.staffId : undefined
       );
       setShowCreateForm(false);
       setFormData({
@@ -67,6 +95,7 @@ function TimeSlots() {
         startTime: '',
         endTime: '',
         maxBookings: 1,
+        staffId: '',
       });
       await fetchTimeSlots();
     } catch (err) {
@@ -116,11 +145,17 @@ function TimeSlots() {
     return slot.currentBookings < slot.maxBookings;
   };
 
+  const canDeleteSlot = (slot) => {
+    if (isAdmin) return true;
+    if (!isStaff) return false;
+    return slot?.createdBy?._id === user?.id;
+  };
+
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Time Slots</h2>
-        {isStaff && (
+        {isStaffOrAdmin && (
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -143,10 +178,32 @@ function TimeSlots() {
       )}
 
       {/* Create Form */}
-      {showCreateForm && isStaff && (
+      {showCreateForm && isStaffOrAdmin && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Time Slot</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isAdmin && (
+              <div>
+                <label htmlFor="staffId" className="block text-sm font-medium text-gray-700 mb-2">
+                  Assign to Staff
+                </label>
+                <select
+                  id="staffId"
+                  name="staffId"
+                  value={formData.staffId}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+                >
+                  <option value="">Select staff member</option>
+                  {staffOptions.map((staff) => (
+                    <option key={staff._id} value={staff._id}>
+                      {staff.name} ({staff.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
                 Title
@@ -349,7 +406,7 @@ function TimeSlots() {
                       Book Now
                     </button>
                   )}
-                  {isStaff && (
+                  {isStaffOrAdmin && canDeleteSlot(slot) && (
                     <button
                       onClick={() => handleDelete(slot._id)}
                       className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
