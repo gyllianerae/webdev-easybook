@@ -113,7 +113,7 @@ The frontend will run on `http://localhost:5173` (or another port if 5173 is tak
 4.  **Admin**:
    - Create time slots with date, time, and max bookings
    - View all appointments
-   - Delete time slots and appointments
+   - Delete, Add, and Edit time slots and appointments
    - View dashboard statistics
    - Manage user accounts
 

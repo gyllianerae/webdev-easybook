@@ -83,7 +83,7 @@ function Dashboard() {
       {/* Welcome Section */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          Welcome back!
+          {`Welcome back, ${user.name}!`}
         </h2>
         <p className="text-gray-600">
           {isStudent
@@ -285,7 +285,7 @@ function Dashboard() {
                 Create New Time Slot
               </a>
               <a
-                href="#appointments"
+                href="#timeslots"
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition inline-block"
               >
                 View All Bookings

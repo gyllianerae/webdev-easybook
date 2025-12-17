@@ -67,6 +67,37 @@ router.post("/", auth, requireRole(["staff", "admin"]), async (req, res) => {
   }
 });
 
+// Update a time slot (staff can edit their own, admin any)
+router.patch("/:id", auth, requireRole(["staff", "admin"]), async (req, res) => {
+  try {
+    const slot = await TimeSlot.findById(req.params.id);
+    if (!slot) {
+      return res.status(404).json({ msg: "Time slot not found" });
+    }
+
+    const isAdmin = req.user.role === "admin";
+    const isOwner = slot.createdBy.toString() === req.user.id;
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ msg: "Forbidden" });
+    }
+
+    const { title, date, startTime, endTime, maxBookings } = req.body;
+    if (title !== undefined) slot.title = title;
+    if (date !== undefined) slot.date = date;
+    if (startTime !== undefined) slot.startTime = startTime;
+    if (endTime !== undefined) slot.endTime = endTime;
+    if (maxBookings !== undefined) slot.maxBookings = maxBookings;
+
+    await slot.save();
+
+    const populatedSlot = await TimeSlot.findById(slot._id).populate("createdBy", "name email");
+    res.json(populatedSlot);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
 router.delete("/:id", auth, requireRole(["staff", "admin"]), async (req, res) => {
   try {
     const slot = await TimeSlot.findById(req.params.id);

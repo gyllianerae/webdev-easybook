@@ -64,6 +64,13 @@ export const api = {
     });
   },
 
+  async updateTimeSlot(id, updates) {
+    return this.request(`/timeslots/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  },
+
   // Appointments
   async getAppointments() {
     return this.request('/appointments', {
@@ -90,10 +97,44 @@ export const api = {
     });
   },
 
+  // Admin appointment management
+  async getAppointmentsByTimeSlot(timeSlotId) {
+    return this.request(`/appointments/timeslot/${timeSlotId}`, {
+      method: 'GET',
+    });
+  },
+
+  async adminCreateAppointment(timeSlotId, studentId) {
+    return this.request('/appointments/admin', {
+      method: 'POST',
+      body: JSON.stringify({ timeSlotId, studentId }),
+    });
+  },
+
+  async adminUpdateAppointmentStudent(appointmentId, studentId) {
+    return this.request(`/appointments/${appointmentId}/student`, {
+      method: 'PATCH',
+      body: JSON.stringify({ studentId }),
+    });
+  },
+
   // Users
   async getStaff() {
     return this.request('/users/staff', {
       method: 'GET',
+    });
+  },
+
+  async getUsers() {
+    return this.request('/users', {
+      method: 'GET',
+    });
+  },
+
+  async updateUser(id, updates) {
+    return this.request(`/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
     });
   },
 };

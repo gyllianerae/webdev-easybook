@@ -3,7 +3,7 @@ import Login from './components/Login';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import TimeSlots from './components/TimeSlots';
-import Appointments from './components/Appointments';
+import AccountManagement from './components/AccountManagement';
 import './App.css';
 
 function App() {
@@ -50,7 +50,7 @@ function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (hash && ['dashboard', 'timeslots', 'appointments'].includes(hash)) {
+      if (hash && ['dashboard', 'timeslots', 'accounts'].includes(hash)) {
         setCurrentPage(hash);
       }
     };
@@ -86,8 +86,8 @@ function App() {
         return <Dashboard />;
       case 'timeslots':
         return <TimeSlots />;
-      case 'appointments':
-        return <Appointments />;
+      case 'accounts':
+        return <AccountManagement />;
       default:
         return <Dashboard />;
     }
