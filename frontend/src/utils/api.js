@@ -137,5 +137,18 @@ export const api = {
       body: JSON.stringify(updates),
     });
   },
+
+  async createUser(name, email, password, role) {
+    return this.request('/users', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password, role }),
+    });
+  },
+
+  async deleteUser(id) {
+    return this.request(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
 

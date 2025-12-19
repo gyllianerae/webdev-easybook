@@ -221,6 +221,19 @@ function TimeSlots() {
     return slot.currentBookings < slot.maxBookings;
   };
 
+  const isPastSlot = (slot) => {
+    if (!slot.date || !slot.endTime) return false;
+    const slotDate = new Date(slot.date);
+    const [hours, minutes] = slot.endTime.split(':').map(Number);
+    slotDate.setHours(hours, minutes, 0, 0);
+    return slotDate < new Date();
+  };
+
+  const isPastAppointment = (apt) => {
+    if (!apt.timeSlot) return false;
+    return isPastSlot(apt.timeSlot);
+  };
+
   const canDeleteSlot = (slot) => {
     if (isAdmin) return true;
     if (!isStaff) return false;
@@ -258,6 +271,35 @@ function TimeSlots() {
       return aOwn ? -1 : 1; // own slots first
     });
   }
+
+  // Separate slots into current and past
+  const currentTimeSlots = orderedTimeSlots.filter((slot) => !isPastSlot(slot));
+  const allPastTimeSlots = orderedTimeSlots.filter((slot) => isPastSlot(slot));
+  
+  // Limit past appointments display (most recent first)
+  const PAST_APPOINTMENTS_LIMIT = 5;
+  const pastTimeSlots = allPastTimeSlots
+    .sort((a, b) => {
+      // Sort by date descending (most recent first)
+      const dateA = new Date(`${a.date}T${a.endTime}`);
+      const dateB = new Date(`${b.date}T${b.endTime}`);
+      return dateB - dateA;
+    })
+    .slice(0, PAST_APPOINTMENTS_LIMIT);
+
+  // Separate appointments into current and past
+  const currentAppointments = filteredMyAppointments.filter((apt) => !isPastAppointment(apt));
+  const allPastAppointments = filteredMyAppointments.filter((apt) => isPastAppointment(apt));
+  
+  // Limit past appointments display (most recent first)
+  const pastAppointments = allPastAppointments
+    .sort((a, b) => {
+      // Sort by appointment date descending (most recent first)
+      const dateA = a.timeSlot ? new Date(`${a.timeSlot.date}T${a.timeSlot.endTime}`) : new Date(0);
+      const dateB = b.timeSlot ? new Date(`${b.timeSlot.date}T${b.timeSlot.endTime}`) : new Date(0);
+      return dateB - dateA;
+    })
+    .slice(0, PAST_APPOINTMENTS_LIMIT);
 
   const mySlots = isStaff && !isAdmin ? filteredTimeSlots.filter((slot) => isSlotOwner(slot)) : [];
   const otherSlots = isStaff && !isAdmin ? filteredTimeSlots.filter((slot) => !isSlotOwner(slot)) : [];
@@ -757,14 +799,15 @@ function TimeSlots() {
           {/* Time Slots List */}
           {!loading && (
             <div className="space-y-4">
-              {orderedTimeSlots.length === 0 ? (
+              {currentTimeSlots.length === 0 && pastTimeSlots.length === 0 ? (
                 <div className="bg-white rounded-lg shadow p-8 text-center">
                   <p className="text-gray-500">
                     {searchTerm ? 'No time slots match this search.' : 'No time slots available.'}
                   </p>
                 </div>
               ) : (
-                orderedTimeSlots.map((slot) => (
+                <>
+                  {currentTimeSlots.map((slot) => (
                 <div
                   key={slot._id}
                   className="bg-white rounded-lg shadow p-6 hover:shadow-md transition"
@@ -1021,7 +1064,132 @@ function TimeSlots() {
                     </div>
                   )}
                 </div>
-                ))
+                  ))}
+
+                  {/* Past Appointments Section */}
+                  {pastTimeSlots.length > 0 && (
+                    <div className="mt-8">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4">Past Appointments</h3>
+                      <div className="space-y-4">
+                        {pastTimeSlots.map((slot) => (
+                          <div
+                            key={slot._id}
+                            className="bg-white rounded-lg shadow p-6 opacity-75"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">{slot.title}</h3>
+                                <div className="space-y-1 text-sm text-gray-600">
+                                  <p className="flex items-center">
+                                    <svg
+                                      className="h-4 w-4 mr-2"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                      />
+                                    </svg>
+                                    {formatDate(slot.date)}
+                                  </p>
+                                  <p className="flex items-center">
+                                    <svg
+                                      className="h-4 w-4 mr-2"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                      />
+                                    </svg>
+                                    {slot.startTime} - {slot.endTime}
+                                  </p>
+                                  <p className="flex items-center">
+                                    <svg
+                                      className="h-4 w-4 mr-2"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                      />
+                                    </svg>
+                                    Created by: {slot.createdBy.name}
+                                  </p>
+                                  <p className="flex items-center">
+                                    <svg
+                                      className="h-4 w-4 mr-2"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                                      />
+                                    </svg>
+                                    Bookings: {slot.currentBookings} / {slot.maxBookings}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="ml-4 flex flex-col items-end space-y-2">
+                                <span className="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-xs font-medium">
+                                  Done
+                                </span>
+                              </div>
+                            </div>
+
+                            {(isAdmin || (isStaff && isSlotOwner(slot))) && openSlotId === slot._id && (
+                              <div className="mt-4 border-t pt-4">
+                                {slotLoading[slot._id] ? (
+                                  <p className="text-gray-500 text-sm">Loading appointments...</p>
+                                ) : (
+                                  <>
+                                    {slotAppointments[slot._id] && slotAppointments[slot._id].length === 0 ? (
+                                      <p className="text-gray-500 text-sm">No appointments booked for this slot.</p>
+                                    ) : (
+                                      <div className="space-y-3">
+                                        {(slotAppointments[slot._id] || []).map((apt) => (
+                                          <div
+                                            key={apt._id}
+                                            className="border border-gray-100 rounded-lg p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                                          >
+                                            <div>
+                                              <p className="text-sm font-semibold text-gray-900">
+                                                {apt.student?.name || 'Unknown'} ({apt.student?.email || 'N/A'})
+                                              </p>
+                                              <p className="text-xs text-gray-500">
+                                                Status: Done
+                                              </p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -1039,44 +1207,81 @@ function TimeSlots() {
 
               {appointmentsLoading ? (
                 <p className="text-gray-500 text-sm">Loading appointments...</p>
-              ) : filteredMyAppointments.length === 0 ? (
+              ) : currentAppointments.length === 0 && pastAppointments.length === 0 ? (
                 <p className="text-gray-500 text-sm">
                   {searchTerm ? 'No booked appointments match this search.' : 'You have no booked appointments.'}
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {filteredMyAppointments.map((apt) => (
-                    <div key={apt._id} className="border border-gray-100 rounded-lg p-3">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {apt.timeSlot?.title || 'Unknown slot'}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {apt.timeSlot?.date ? formatDate(apt.timeSlot.date) : 'Date unavailable'}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {apt.timeSlot?.startTime && apt.timeSlot?.endTime
-                              ? `${apt.timeSlot.startTime} - ${apt.timeSlot.endTime}`
-                              : 'Time unavailable'}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            Booked on {formatDateTime(apt.createdAt)}
-                          </p>
+                <>
+                  {currentAppointments.length > 0 && (
+                    <div className="space-y-3">
+                      {currentAppointments.map((apt) => (
+                        <div key={apt._id} className="border border-gray-100 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {apt.timeSlot?.title || 'Unknown slot'}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {apt.timeSlot?.date ? formatDate(apt.timeSlot.date) : 'Date unavailable'}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {apt.timeSlot?.startTime && apt.timeSlot?.endTime
+                                  ? `${apt.timeSlot.startTime} - ${apt.timeSlot.endTime}`
+                                  : 'Time unavailable'}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                Booked on {formatDateTime(apt.createdAt)}
+                              </p>
+                            </div>
+                            <span
+                              className={`px-2 py-1 rounded-full text-[11px] font-medium ${
+                                apt.status === 'booked'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}
+                            >
+                              {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
+                            </span>
+                          </div>
                         </div>
-                        <span
-                          className={`px-2 py-1 rounded-full text-[11px] font-medium ${
-                            apt.status === 'booked'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
-                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {pastAppointments.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Past Appointments</h3>
+                      <div className="space-y-3">
+                        {pastAppointments.map((apt) => (
+                          <div key={apt._id} className="border border-gray-100 rounded-lg p-3 opacity-75">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {apt.timeSlot?.title || 'Unknown slot'}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {apt.timeSlot?.date ? formatDate(apt.timeSlot.date) : 'Date unavailable'}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {apt.timeSlot?.startTime && apt.timeSlot?.endTime
+                                    ? `${apt.timeSlot.startTime} - ${apt.timeSlot.endTime}`
+                                    : 'Time unavailable'}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  Booked on {formatDateTime(apt.createdAt)}
+                                </p>
+                              </div>
+                              <span className="px-2 py-1 rounded-full text-[11px] font-medium bg-gray-200 text-gray-700">
+                                Done
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           </div>
