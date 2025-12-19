@@ -115,7 +115,7 @@ The frontend will run on `http://localhost:5173` (or another port if 5173 is tak
    - View all appointments
    - Delete, Add, and Edit time slots and appointments
    - View dashboard statistics
-   - Manage user accounts
+   - Manage user accounts (add, edit, delete)
 
 ## API Endpoints
 
