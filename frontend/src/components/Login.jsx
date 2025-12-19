@@ -190,33 +190,6 @@ function Login({ onLogin }) {
                 </>
               )}
             </p>
-            <div className="pt-3 border-t border-gray-200">
-              <p className="text-xs text-gray-500 mb-2">Quick Test Mode (to view pages):</p>
-              <div className="flex gap-2 justify-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.setItem('user', JSON.stringify({ name: 'Test Student', email: 'student@test.com', role: 'student', id: '1' }));
-                    localStorage.setItem('token', 'test-token');
-                    window.location.reload();
-                  }}
-                  className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-                >
-                  Test as Student
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.setItem('user', JSON.stringify({ name: 'Test Staff', email: 'staff@test.com', role: 'staff', id: '2' }));
-                    localStorage.setItem('token', 'test-token');
-                    window.location.reload();
-                  }}
-                  className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-                >
-                  Test as Staff
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
